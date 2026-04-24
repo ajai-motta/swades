@@ -13,7 +13,9 @@ import {
 } from "@my-better-t-app/ui/components/card"
 import { LiveWaveform } from "@/components/ui/live-waveform"
 import { useRecorder, type WavChunk } from "@/hooks/use-recorder"
+import { useChunkHandler } from "@/hooks/use-chuck-handler"
 
+let count=0;
 function formatTime(seconds: number) {
   const m = Math.floor(seconds / 60)
   const s = Math.floor(seconds % 60)
@@ -48,7 +50,7 @@ function ChunkRow({ chunk, index }: { chunk: WavChunk; index: number }) {
     a.download = `chunk-${index + 1}.wav`
     a.click()
   }
-
+ 
   return (
     <div className="flex items-center justify-between gap-3 rounded-sm border border-border/50 bg-muted/30 px-3 py-2">
       <audio
@@ -82,6 +84,20 @@ export default function RecorderPage() {
   const isRecording = status === "recording"
   const isPaused = status === "paused"
   const isActive = isRecording || isPaused
+const handleChunk = useCallback(async (chunk: WavChunk) => {
+  const formData = new FormData()
+  formData.append("file", chunk.blob)
+  formData.append("chunkId", String(chunk.id))
+  formData.append('chunkNumber',String(count))
+
+  const res=await fetch("http://localhost:3000/api/upload", {
+    method: "POST",
+    body: formData,
+  })
+  if(res){
+    count++
+  }
+}, [])
 
   const handlePrimary = useCallback(() => {
     if (isActive) {
@@ -90,7 +106,8 @@ export default function RecorderPage() {
       start()
     }
   }, [isActive, stop, start])
-
+     useChunkHandler(chunks,{onChunk: handleChunk
+  },)
   return (
     <div className="container mx-auto flex max-w-lg flex-col items-center gap-6 px-4 py-8">
       <Card className="w-full">
